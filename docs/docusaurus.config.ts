@@ -56,7 +56,7 @@ const config: Config = {
           {
             // Redocusaurus will automatically bundle your spec into a single file during the build
             id: 'using-single-yaml',
-            spec: 'openapi/openapi.json',
+            spec: './docs/openapi/openapi.json',
             route: '/openapi/',
           },
         ],
