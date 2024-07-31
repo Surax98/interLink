@@ -55,8 +55,8 @@ const config: Config = {
           // Pass it a path to a local OpenAPI YAML file
           {
             // Redocusaurus will automatically bundle your spec into a single file during the build
-            id: 'using-single-yaml',
-            spec: 'openapi/openapi.json',
+            id: 'using-single-json',
+            spec: 'https://github.com/surax98/interLink/releases/download/0.3.0-alpha/openapi.json',
             route: '/openapi/',
           },
         ],
