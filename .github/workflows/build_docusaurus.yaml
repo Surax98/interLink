@@ -1,0 +1,67 @@
+name: Deploy Docusaurus Site
+
+on:
+  push:
+    tags:
+      - "*"  # Change this to your default branch
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install GitHub CLI
+        run: sudo apt-get install -y gh
+
+      - name: Authenticate GitHub CLI
+        run:  echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Get latest workflow run ID
+        id: get_run
+        run: |
+          latest_run_id=$(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
+          echo "latest_run_id=$latest_run_id" >> $GITHUB_ENV
+
+      - name: Fetch artifact information
+        id: fetch_artifacts
+        run: |
+          artifact_info=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ env.latest_run_id }}/artifacts")
+          echo "$artifact_info" | jq '.artifacts[] | select(.name == "openapi") | .id' > artifact_id.txt
+          artifact_id=$(cat artifact_id.txt)
+          echo "artifact_id=$artifact_id" >> $GITHUB_ENV
+
+      - name: Download latest artifact
+        run: |
+          mkdir -p ./openapi
+          curl -L -o ./openapi/openapi.zip -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ env.artifact_id }}/zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract artifact
+        run: |
+          unzip ./openapi/openapi.zip -d ./openapi
+          mv ./openapi/openapi ./openapi/openapi.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'  # Ensure this matches the Node.js version required by Docusaurus
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Docusaurus site
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build  # Ensure this matches the build output directory of Docusaurus
