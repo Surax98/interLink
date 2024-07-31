@@ -1,0 +1,54 @@
+name: Deploy Docusaurus Site
+
+on:
+  push:
+    tag:
+      - *  # Change this to your default branch
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install GitHub CLI
+        run: sudo apt-get install -y gh
+
+      - name: Authenticate GitHub CLI
+        run: gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get latest release
+        id: get_release
+        run: |
+          latest_release=$(gh release view --json assets --jq '.assets[0].id')
+          echo "asset_id=$latest_release" >> $GITHUB_ENV
+
+      - name: Download latest release asset
+        run: |
+          mkdir -p ./openapi
+          gh release download -R Surax98/interLink --pattern 'openapi.json' --dir ./openapi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename artifact to openapi.json
+        run: mv ./openapi/openapi.json ./openapi/openapi.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'  # Ensure this matches the Node.js version required by Docusaurus
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Docusaurus site
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build  # Ensure this matches the build output directory of Docusaurus
