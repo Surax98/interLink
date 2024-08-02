@@ -12,10 +12,7 @@ paths:
         content:
           application/json:
             schema:
-              items:
-                $ref: '#/components/schemas/Pod'
-              type: array
-              title: Pod
+              $ref: '#/components/schemas/Pod'
         required: true
       responses:
         '200':
